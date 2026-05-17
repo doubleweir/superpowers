@@ -24,6 +24,15 @@ description: Use after brainstorming Step 2 selects Target published version —
 - Product issues: `.superpowers/issues.md` (`ISSUE-NNN`) — link in version `*-spec.md`.
 - Framework feedback: `.superpowers/project2feedback.md` — not for product bugs.
 
+### Host deployment (required for Stop hooks)
+
+Fork changes alone do **not** register Stop hooks in project settings. After editing this skill or `hooks/*` in the fork:
+
+1. `docs/scripts/sync-superpowers-fork.sh full-sync latest` (capture → deploy → **wire**)
+2. Confirm: `wire-host-project-hooks.sh verify` and `smoke` (see `docs/host-integration.md`)
+
+Without **wire**, `hotfix-parallel-sync-guard` / `next-minor-behind-main-guard` exist in overlay/cache but **will not run** on session Stop.
+
 ## Git baseline (mandatory before implementation)
 
 ```bash

@@ -8,6 +8,7 @@
 
 | 这版在解决什么 | 点入正文 |
 | --- | --- |
+| **宿主接线（wire）**：`full-sync` 第三步把 fork `hooks.json` 写入项目 settings；overlay 优先 resolver；No.18 hotfix Stop 自动生效 | [→ 打开](#sec-20260517-host-wire) |
 | **CWS 发布链（No.19）**：main 上 rebuild+commit `.output` 再 tag/CWS；`cws-artifact-sync-guard`；finishing Step 2.55b | [→ 打开](#sec-20260517-cws-artifact-sync) |
 | **已发布子产品 hotfix（R1/R2/H7）**：与常规 PR 同形；brainstorming 三选一；`hotfix-flow` 薄编排；并行下一版本 Stop 双 hook | [→ 打开](#sec-20260517-published-hotfix-flow) |
 | **ChatGPT 真机 Chrome 验证**：独立调试 Profile + DevTools MCP workflow + `launch-chatbobi-chrome.sh` + debug bridge 诊断命令 | [→ 打开](#sec-20260515-chatgpt-chrome-verify) |
@@ -47,6 +48,29 @@
 | **evolution-keeper** 角色**落地** | [→ 打开](#sec-20260420-keeper) |
 | 测试**证据**、**门禁**试点、用例可**机器**判 | [→ 打开](#sec-20260420-testgate) |
 | 起版 **5.0.7**：**版本/PR/Task 文档** + **七步** **硬**约束 | [→ 打开](#sec-20260420-507) |
+
+<a id="sec-20260517-host-wire"></a>
+## 宿主接线：fork 改完 hook 须在项目 settings 自动挂上（No.18 wire）
+
+> **发版**：与 hotfix / CWS 同批 `sp-v5.0.7-xia-*` tag；ChatBobi `full-sync latest` 已含 wire 步骤。
+
+### 结论
+
+`capture` + `deploy` 只把脚本放进 overlay/cache；**Claude 项目**仍读 `.claude/settings.local.json`。新增 **`scripts/wire-host-project-hooks.sh`**（apply / verify / smoke / install-runner）与 **`scripts/run-superpowers-hook-host.sh`**（overlay → cache → backup 仅 host-only）。宿主提供 **`host-hook-wiring.json`**（ChatBobi 专属 hook 与插入点）。`full-sync` 末尾应执行 wire，使 No.18 **`hotfix-parallel-sync-guard`**、**`next-minor-behind-main-guard`** 等在 Stop 链生效。
+
+### 模块
+
+| 路径 | 说明 |
+|------|------|
+| `scripts/wire-host-project-hooks.sh` | 合并 overlay `hooks.json` + 宿主 wiring → settings |
+| `scripts/run-superpowers-hook-host.sh` | 安装到宿主 `hooks-backup/run-superpowers-hook` |
+| `docs/host-integration.md` | 三步流水线说明 |
+| `skills/hotfix-flow/SKILL.md` | Host deployment（wire）小节 |
+
+### 验证
+
+- ChatBobi：`wire-host-project-hooks.sh verify` + `smoke`（含 `test-hotfix-parallel-sync.sh`）
+- 勿在 `hooks-backup/` 长期保留与 overlay 同名的托管 hook 副本
 
 <a id="sec-20260517-cws-artifact-sync"></a>
 ## CWS 发布必须与 git `.output` 一致（No.19 / project2feedback）
@@ -102,7 +126,7 @@
 
 - `tests/claude-code/test-active-pr-resolution.sh` 用例 10（hotfix 分支绑定目录）
 - `tests/claude-code/test-hotfix-parallel-sync.sh`（H7 辅助函数 + Stop guard）
-- ChatBobi 宿主：`.superpowers/issues.md` 工单 + `full-sync latest` 后 overlay 含本变更
+- ChatBobi 宿主：`.superpowers/issues.md` 工单 + `full-sync latest`（含 **wire**）后 overlay 与 Stop 链含本变更
 
 <a id="sec-20260515-chatgpt-chrome-verify"></a>
 ## ChatGPT 真机 Chrome 验证（No.12 / project2feedback）

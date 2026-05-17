@@ -29,7 +29,7 @@ Every project goes through this process. A todo list, a single-function utility,
 You MUST create a task for each of these items and complete them in order:
 
 1. **Explore project context** — check files, docs, recent commits
-2. **Ask version mode (mandatory)** — ask whether this is `Start New Version` or `Continue Current Version`; if new, ask whether it is `New Feature` or `Small Optimization`
+2. **Ask version targeting (mandatory)** — three-way choice (see Step 2 template); conditional second question per branch; if **Target published version**, invoke **`hotfix-flow`** after spec gate for Git/CWS only (not instead of this checklist)
 3. **Ask existing materials (mandatory, multi-select)** — ask exactly what exists now: `Idea | PRD | Design Draft | Interactive Demo`
 4. **Round 3 — Material-triggered intake (mandatory when applicable)** — for **each** material selected in Step 3, run the matching branch in **Material-triggered intake** below; multi-select means run **all** applicable branches before **deep** clarifying questions. Lightweight dialogue **during** intake is allowed and expected (see **Material-triggered intake**). `Idea` alone adds no file/MCP intake. `None of the above` skips intake and runs bootstrap questions only (see that branch).
 5. **Material-driven flow selection** — choose emphasis for upcoming clarifying questions from merged intake context and version mode (see Material-Driven Subflows below)
@@ -94,9 +94,7 @@ digraph brainstorming {
 **Understanding the idea:**
 
 - Check out the current project state first (files, docs, recent commits)
-- Ask version mode before deep questions:
-  - `Start New Version` or `Continue Current Version`
-  - If `Start New Version`: `New Feature` or `Small Optimization`
+- Ask version targeting before deep questions (Step 2 template — three options, not two)
 - Ask existing materials as mandatory multi-select:
   - `Idea | PRD | Design Draft | Interactive Demo`
 - **Round 3 (material-triggered intake):** When Step 3 includes `PRD`, `Design Draft`, and/or `Interactive Demo`, run **every** matching intake branch (see **Material-triggered intake**) before **deep** clarifying questions. **One intake prompt per message** (location / link questions count as intake). Normal **lightweight** conversation during intake (paths, confirmations, brief context) is fine — you are only deferring the **main** refinement pass until materials are loaded. `Idea` alone skips file/MCP intake and goes straight to collaborative refinement.
@@ -111,15 +109,24 @@ digraph brainstorming {
 
 Use these exact question blocks for Step 2 and Step 3. Do not skip them.
 
-Step 2 — Version mode (mandatory):
+Step 2 — Version targeting (mandatory):
 
-> Before we continue, choose version mode:
-> 1) Start New Version
-> 2) Continue Current Version
+> Before we continue, where should this work land?
+> 1) **Current in-flight version** — the version you are already developing on a feature branch (e.g. `pv0.1.15-*` on `feat/pv0.1.15-*`)
+> 2) **Published / production version** — users are on this build today; needs a hotfix line (e.g. `pv0.1.14-hotfix-*` from `plugin/pv0.1.14` tag)
+> 3) **Start a new version** — not the in-flight branch and not patching production directly
 >
-> If you choose **Start New Version**, also choose:
+> If **1) Current in-flight** or **3) Start new**, also choose:
 > A) New Feature
 > B) Small Optimization
+>
+> If **2) Published / production**, also choose:
+> A) Bug fix (restore correct behavior / regression)
+> B) Urgent inserted capability (cannot wait for next minor, still ships on same published semver + hf tag)
+>
+> Notes:
+> - Option 2 still runs **this full brainstorming checklist** and **full writing-plans** (version + PR dirs). EP-009 one-line skip does **not** apply to ISSUE-driven hotfix.
+> - After spec approval on option 2, use **`hotfix-flow`** for Git tag baseline and parallel next-minor sync only.
 
 Step 3 — Existing materials (mandatory, multi-select):
 
@@ -225,10 +232,11 @@ No intake branches. Run the 3–5 bootstrap questions already defined in Step 3;
 
 After Step 2 (version mode), Step 3 (existing materials), and **Round 3 intake** when applicable, choose emphasis with these rules:
 
-- **Version mode selected**
-  - If `Continue Current Version`, prioritize compatibility with existing version scope and unresolved risks.
-  - If `Start New Version`, require explicit statement whether this is `New Feature` or `Small Optimization` and enforce matching scope depth.
+- **Version targeting selected**
+  - If **Current in-flight version**, prioritize compatibility with that branch's scope and unresolved risks; version root matches active `feat/pv*-*` branch.
+  - If **Start a new version**, require `New Feature` vs `Small Optimization` and enforce matching scope depth.
   - For `Small Optimization`, reject hidden feature creep; keep changes tightly bounded.
+  - If **Published / production version**, version root MUST be `docs/{product}/pv{x.y.z}-hotfix-<topic>/` (not the in-flight minor dir); link `issues.md` `ISSUE-NNN` in spec; scope type = bug fix vs urgent capability from Step 2; still use full design-gate and spec-gate; complex work may use multiple `PRn` dirs like any version.
 
 - **Idea selected**
   - Prioritize problem-definition questions: user problem, failed current path, success metrics, scope-out.

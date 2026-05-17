@@ -5,6 +5,18 @@ description: Use when you have a spec or requirements for a multi-step task, bef
 
 # Writing Plans
 
+## Published-version hotfix (same plan shape as regular versions)
+
+When brainstorming Step 2 chose **Target published / production version**, use the **same** plan + PR scaffold as any version:
+
+- Version root: `docs/{product}/pv{x.y.z}-hotfix-<topic>/`
+- PR dirs: `pv{x.y.z}-hotfix-<topic>-PRn/` with standard tdd-log / subagent-summary / review-report / finalize-log
+- In the active PR `*-finalize-log.md`, include `## Parallel next minor sync` (strategy: `merge_main` | `cherry_pick` | `N/A`, target_branch; add evidence after hotfix is on main) — hotfix Stop hook requires **plan** when a higher semver `feat/pv*` branch exists; git sync enforced on the next-minor branch
+
+Do **not** use a single root-level plan file instead of PR dirs for hotfix.
+
+---
+
 ## Overview
 
 Write comprehensive implementation plans assuming the engineer has zero context for our codebase and questionable taste. Document everything they need to know: which files to touch for each task, code, testing, docs they might need to check, how to test it. Give them the whole plan as bite-sized tasks. DRY. YAGNI. TDD. Frequent commits.

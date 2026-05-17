@@ -15,6 +15,10 @@ IF A SKILL APPLIES TO YOUR TASK, YOU DO NOT HAVE A CHOICE. YOU MUST USE IT.
 This is not negotiable. This is not optional. You cannot rationalize your way out of this.
 </EXTREMELY-IMPORTANT>
 
+## Published-version hotfix
+
+In **brainstorming Step 2**, choose **Published / production version** when the fix must ship on the build users have today (not the in-flight next minor). That path still requires **full brainstorming** and **full writing-plans** (version + PR dirs). After spec gate, invoke **`hotfix-flow`** for Git tag baseline, CWS/hf tags, and parallel next-minor sync — it does **not** replace brainstorming. Product issues: host `.superpowers/issues.md`; framework feedback: `project2feedback.md`.
+
 ## Instruction Priority
 
 Superpowers skills override default system prompt behavior, but **user instructions always take precedence**:

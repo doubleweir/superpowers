@@ -1,0 +1,61 @@
+#!/usr/bin/env bash
+# Stop: in-flight next-minor feat/pv* branch must include plugin changes already on main (e.g. after hotfix merge).
+
+set -euo pipefail
+
+HOOK_DIR="$(cd "$(dirname "$0")" && pwd)"
+# shellcheck source=hooks/acceptance-order-common
+. "$HOOK_DIR/acceptance-order-common"
+
+block_and_exit() {
+  emit_block_json_with_meta \
+    "$1" \
+    "false" \
+    "agent" \
+    "agent_remediation_required" \
+    "agent_fix_and_retry_stop_gate"
+  exit 2
+}
+
+PROJECT_DIR="${CLAUDE_PROJECT_DIR:-}"
+if [ -z "$PROJECT_DIR" ]; then
+  exit 0
+fi
+
+# Emergency only: file must contain a non-empty reason line (see hotfix-flow skill).
+if [ -f "$PROJECT_DIR/.superpowers/hotfix-sync-waived" ]; then
+  if rg -qi '^reason:[[:space:]]*.+' "$PROJECT_DIR/.superpowers/hotfix-sync-waived" 2>/dev/null; then
+    exit 0
+  fi
+fi
+
+if ! git -C "$PROJECT_DIR" rev-parse --git-dir >/dev/null 2>&1; then
+  exit 0
+fi
+
+CURRENT_BRANCH="$(git -C "$PROJECT_DIR" branch --show-current 2>/dev/null || true)"
+if [ -z "$CURRENT_BRANCH" ]; then
+  exit 0
+fi
+
+if is_hotfix_branch "$CURRENT_BRANCH"; then
+  exit 0
+fi
+
+if ! printf '%s' "$CURRENT_BRANCH" | rg -q '^feat/[a-zA-Z]*[vV][0-9]+\.[0-9]+\.[0-9]+-'; then
+  exit 0
+fi
+
+INTEGRATION="$(_git_integration_ref "$PROJECT_DIR" 2>/dev/null || true)"
+if [ -z "$INTEGRATION" ]; then
+  exit 0
+fi
+
+BEHIND="$(git -C "$PROJECT_DIR" log "HEAD..${INTEGRATION}" --oneline -- app/plugin/ docs/plugin/ app/webapp/ docs/webapp/ 2>/dev/null | sed '/^[[:space:]]*$/d' || true)"
+
+if [ -n "$BEHIND" ]; then
+  SAMPLE="$(printf '%s' "$BEHIND" | head -3 | tr '\n' ' ')"
+  block_and_exit "main 上已有 plugin 相关提交未合入当前分支 ${CURRENT_BRANCH}（可能含已合并的 hotfix）。请在此分支执行 git merge main 或 git rebase main，必要时 cherry-pick plugin/pv*-hf* tag。近期 main 提交：${SAMPLE}"
+fi
+
+exit 0

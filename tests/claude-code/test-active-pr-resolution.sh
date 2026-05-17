@@ -114,5 +114,35 @@ assert_path_eq "$resolved" "$DUP_DEEP" "same basename: deeper docs path wins for
 resolved="$(resolve_version_dir_from_branch "$DUP_ROOT" "feat/pv0.5.0-same")"
 assert_path_eq "$resolved" "$DUP_DEEP" "same basename: deeper path for resolve_version_dir_from_branch"
 
+# 10) Hotfix branch binds docs/plugin/pv*-hotfix-* (No.18)
+HF_ROOT="$TMP_DIR/hotfix-project"
+HF_VERSION="$HF_ROOT/docs/plugin/pv0.1.14-hotfix-scroll"
+HF_OTHER="$HF_ROOT/docs/plugin/pv0.1.14-panel-polish"
+mkdir -p "$HF_VERSION" "$HF_OTHER"
+touch "$HF_VERSION/.keep" "$HF_OTHER/.keep"
+touch -t 202601010101 "$HF_OTHER/.keep"
+touch -t 202501010101 "$HF_VERSION/.keep"
+resolved="$(resolve_active_version_dir "$HF_ROOT" "feat/pv0.1.14-hotfix-scroll")"
+assert_path_eq "$resolved" "$HF_VERSION" "resolve_active_version_dir prefers hotfix branch-bound root"
+if is_hotfix_branch "feat/pv0.1.14-hotfix-scroll"; then
+  echo "  [PASS] is_hotfix_branch"
+else
+  echo "  [FAIL] is_hotfix_branch"
+  exit 1
+fi
+if is_hotfix_version_basename "pv0.1.14-hotfix-scroll"; then
+  echo "  [PASS] is_hotfix_version_basename"
+else
+  echo "  [FAIL] is_hotfix_version_basename"
+  exit 1
+fi
+
+# 11) Hotfix PR dir pv*-hotfix-*-PRn resolves under hotfix version root
+HF_PR_DIR="$HF_VERSION/pv0.1.14-hotfix-scroll-PR1"
+mkdir -p "$HF_PR_DIR"
+touch "$HF_PR_DIR/pv0.1.14-hotfix-scroll-PR1-tdd-log.md"
+resolved="$(resolve_active_pr_dir "$HF_ROOT" "$HF_VERSION" "")"
+assert_path_eq "$resolved" "$HF_PR_DIR" "resolve_active_pr_dir finds hotfix *-PRn dir"
+
 echo ""
 echo "=== active PR resolution checks passed ==="

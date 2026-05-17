@@ -1,0 +1,65 @@
+#!/usr/bin/env bash
+# Stop: hotfix branch must document parallel next-minor sync when feat/pv* (non-hotfix) branches exist.
+
+set -euo pipefail
+
+HOOK_DIR="$(cd "$(dirname "$0")" && pwd)"
+# shellcheck source=hooks/acceptance-order-common
+. "$HOOK_DIR/acceptance-order-common"
+
+block_and_exit() {
+  emit_block_json_with_meta \
+    "$1" \
+    "false" \
+    "agent" \
+    "agent_remediation_required" \
+    "agent_fix_and_retry_stop_gate"
+  exit 2
+}
+
+PROJECT_DIR="${CLAUDE_PROJECT_DIR:-}"
+if [ -z "$PROJECT_DIR" ]; then
+  exit 0
+fi
+
+if ! git -C "$PROJECT_DIR" rev-parse --git-dir >/dev/null 2>&1; then
+  exit 0
+fi
+
+CURRENT_BRANCH="$(git -C "$PROJECT_DIR" branch --show-current 2>/dev/null || true)"
+if ! is_hotfix_branch "$CURRENT_BRANCH"; then
+  exit 0
+fi
+
+BASELINE_TAG="$(subproduct_baseline_tag_from_hotfix_branch "$CURRENT_BRANCH" 2>/dev/null || true)"
+if [ -n "$BASELINE_TAG" ] && ! git -C "$PROJECT_DIR" rev-parse --verify "$BASELINE_TAG" >/dev/null 2>&1; then
+  block_and_exit "缺少子产品发布基线 tag ${BASELINE_TAG}（hotfix 须从该 tag 起飞，勿从 main HEAD）。请先补打：git tag ${BASELINE_TAG} <merge-commit> && git push origin ${BASELINE_TAG}"
+fi
+
+IN_FLIGHT="$(list_in_flight_pv_feature_branches "$PROJECT_DIR" "$CURRENT_BRANCH" | sed '/^[[:space:]]*$/d' | head -20 || true)"
+if [ -z "$IN_FLIGHT" ]; then
+  exit 0
+fi
+
+set +e
+VERSION_DIR="$(resolve_active_version_dir "$PROJECT_DIR" "$CURRENT_BRANCH")"
+set -e
+if [ -z "$VERSION_DIR" ]; then
+  block_and_exit "hotfix 分支存在进行中的下一版本 feat/pv* 分支，但无法解析 hotfix 版本目录以检查 Parallel next minor sync。"
+fi
+
+set +e
+PR_DIR="$(resolve_active_pr_dir "$PROJECT_DIR" "$VERSION_DIR" "")"
+set -e
+if [ -z "$PR_DIR" ]; then
+  block_and_exit "hotfix 分支存在进行中的下一版本 feat/pv* 分支（例如：$(printf '%s' "$IN_FLIGHT" | head -3 | tr '\n' ' ')），但缺少 PR 目录。请创建 pv*-hotfix-*-PRn 并在 *-finalize-log.md 中加入 ## Parallel next minor sync（strategy: merge_main 或 cherry_pick，以及 target_branch）。"
+fi
+
+PR_BASE="$(basename "$PR_DIR")"
+FINALIZE_LOG="${PR_DIR}/${PR_BASE}-finalize-log.md"
+
+if ! parallel_sync_section_valid "$FINALIZE_LOG" "plan"; then
+  block_and_exit "检测到进行中的下一版本分支（semver 高于当前 hotfix 且未 merge 入 main），但 PR finalize-log 缺少有效的 ## Parallel next minor sync 计划（需要 strategy: merge_main 或 cherry_pick，以及 target_branch）。evidence 在 hotfix 合入 main 后由下一版本分支 merge/rebase 完成；该步骤由 next-minor-behind-main-guard 用 git 校验。分支示例：$(printf '%s' "$IN_FLIGHT" | head -3 | tr '\n' ' ')。"
+fi
+
+exit 0

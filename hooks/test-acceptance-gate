@@ -100,8 +100,13 @@ if superpowers_platform_release_active "$PROJECT_DIR"; then
   exit 0
 fi
 
+CURRENT_BRANCH=""
+if git -C "$PROJECT_DIR" rev-parse --git-dir >/dev/null 2>&1; then
+  CURRENT_BRANCH="$(git -C "$PROJECT_DIR" branch --show-current 2>/dev/null || true)"
+fi
+
 set +e
-LATEST_VERSION="$(resolve_latest_version_dir "$PROJECT_DIR")"
+LATEST_VERSION="$(resolve_active_version_dir "$PROJECT_DIR" "$CURRENT_BRANCH")"
 _RES_V=$?
 set -e
 if [ "$_RES_V" -ne 0 ]; then
@@ -152,9 +157,6 @@ if [ "$missing" -ne 0 ]; then
   block_and_exit "缺少 PR 完整制品。需提供 tdd-log/subagent-summary/review-report/finalize-log 与版本级 Vx.y.z-test.md。"
 fi
 
-# autotest/mocktest/devicetest: version file only, under "## Acceptance status (hooks)" (enforced in validate_order below)
-
-# Detailed test-case gate (both PR and version level)
 if ! has_case_id_in_file "$PR_TDD_LOG"; then
   block_and_exit "PR级 tdd-log 缺少详细测试用例（T-xxx/TC-xxx）。"
 fi
@@ -165,7 +167,6 @@ if ! has_case_id_in_file "$VERSION_TEST"; then
   block_and_exit "版本级 Vx.y.z-test.md 缺少详细测试用例编号（TC-xxx）。"
 fi
 
-# Template quality gate (strict six-field contract)
 pr_missing_fields=()
 pr_case_entries=()
 while IFS= read -r entry; do
