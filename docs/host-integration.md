@@ -10,6 +10,8 @@ Superpowers plugin `hooks/hooks.json` applies automatically only when Claude loa
 
 `full-sync` should run all three (ChatBobi: `docs/scripts/sync-superpowers-fork.sh full-sync latest`).
 
+When you mention changing Superpowers hooks/skills/sync in ChatBobi, `superpowers-runtime-sync-reminder` (UserPromptSubmit) injects the same **full-sync latest** instruction for the agent.
+
 ## Host files (not in fork)
 
 | File | Role |

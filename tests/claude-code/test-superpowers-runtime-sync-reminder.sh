@@ -27,7 +27,8 @@ assert_contains() {
 output="$(printf '%s' '{"prompt":"帮我改一下 superpowers 的 hook 和本地发版流程"}' | CLAUDE_PLUGIN_ROOT="$ROOT" bash "$HOOK")"
 assert_contains "$output" '"hookEventName": "UserPromptSubmit"' "hook emits UserPromptSubmit payload"
 assert_contains "$output" 'Superpowers maintenance task detected' "hook injects routing reminder"
-assert_contains "$output" 'docs/scripts/sync-superpowers-fork.sh capture' "hook references capture step"
+assert_contains "$output" 'sync-superpowers-fork.sh full-sync latest' "hook references full-sync pipeline"
+assert_contains "$output" 'wire' "hook mentions wire step"
 
 empty_output="$(printf '%s' '{"prompt":"帮我改一下 panel dark token"}' | CLAUDE_PLUGIN_ROOT="$ROOT" bash "$HOOK")"
 if [ -z "$empty_output" ]; then

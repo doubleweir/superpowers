@@ -35,7 +35,7 @@ fi
 
 mentions_superpowers_surface() {
   local prompt="$1"
-  printf '%s' "$prompt" | rg -qi "superpowers|runtime sync|runtime|hook|hooks|overlay|cache|fork|sync-superpowers-fork|manage-superpowers-local|docs/superpowers-local|plugin cache|claude plugin"
+  printf '%s' "$prompt" | rg -qi "superpowers|runtime sync|full-sync|wire|hook|hooks|overlay|cache|fork|sync-superpowers-fork|manage-superpowers-local|docs/superpowers-local|plugin cache|claude plugin"
 }
 
 mentions_change_intent() {
@@ -51,7 +51,7 @@ if ! mentions_change_intent "$PROMPT"; then
   exit 0
 fi
 
-reminder="Superpowers maintenance task detected. Route this turn through Superpowers Runtime Sync. Source of truth order: (1) /Users/harry/Documents/GitHub/superpowers-fork for version-controlled changes, (2) docs/superpowers-local/ as overlay/deploy helper, (3) ~/.claude/plugins/cache/claude-plugins-official/superpowers/<version>/ as runtime target only. Preferred flow: edit/test in fork -> docs/scripts/sync-superpowers-fork.sh capture -> status -> deploy latest -> black-box verify -> update docs/superpowers-local/LOCAL_RELEASES.md -> commit/push/tag/changelogs in the fork. Do not treat ChatBobi overlay or installed cache as the primary editing location unless the user explicitly approves an emergency hotfix."
+reminder="Superpowers maintenance task detected. Route this turn through Superpowers Runtime Sync (complete pipeline). Source of truth: (1) /Users/harry/Documents/superpowers (fork) for version-controlled changes, (2) ChatBobi docs/superpowers-local/ overlay + host-hook-wiring.json, (3) ~/.claude/plugins/cache/claude-plugins-official/superpowers/<version>/ as runtime target only. After edit/test in fork, run ChatBobi docs/scripts/sync-superpowers-fork.sh full-sync latest (capture + deploy + wire + verify). Do not skip wire — project .claude/settings.local.json must list fork Stop/UserPromptSubmit hooks. Then commit/push/tag/changelogs in fork; update docs/superpowers-local/LOCAL_RELEASES.md. Do not treat overlay or installed cache as the primary edit location unless the user explicitly approves an emergency host hotfix."
 reminder_escaped="$(escape_for_json "$reminder")"
 
 if [ -n "${CURSOR_PLUGIN_ROOT:-}" ]; then

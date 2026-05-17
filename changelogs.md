@@ -66,9 +66,11 @@
 | `scripts/run-superpowers-hook-host.sh` | 安装到宿主 `hooks-backup/run-superpowers-hook` |
 | `docs/host-integration.md` | 三步流水线说明 |
 | `skills/hotfix-flow/SKILL.md` | Host deployment（wire）小节 |
+| `hooks/superpowers-runtime-sync-reminder` | UserPromptSubmit 提醒改为 **full-sync latest**（含 wire+verify），与三步流水线一致 |
 
 ### 验证
 
+- `bash tests/claude-code/test-superpowers-runtime-sync-reminder.sh`
 - ChatBobi：`wire-host-project-hooks.sh verify` + `smoke`（含 `test-hotfix-parallel-sync.sh`）
 - 勿在 `hooks-backup/` 长期保留与 overlay 同名的托管 hook 副本
 
