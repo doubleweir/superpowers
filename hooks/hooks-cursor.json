@@ -43,6 +43,9 @@
         "command": "./hooks/cws-artifact-sync-guard"
       },
       {
+        "command": "./hooks/cws-production-build-credentials-guard"
+      },
+      {
         "command": "./hooks/hotfix-parallel-sync-guard"
       },
       {

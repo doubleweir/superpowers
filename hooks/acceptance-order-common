@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Shared acceptance-order helpers for hooks.
-# Version-level autotest/mocktest/devicetest[/figma-live-sync|codetofigma]: ONLY inside "## Acceptance status (hooks)" (exact H2, no variants).
+# Version-level real-host acceptance lives ONLY inside "## Acceptance status (hooks)" (exact H2, no variants).
 
 first_match_line() {
   local keyword="$1"
@@ -135,7 +135,8 @@ extract_acceptance_status_to_file() {
   return 0
 }
 
-# Validate autotest -> mocktest -> devicetest [-> figma-live-sync] order using first match **inside** "## Acceptance status (hooks)" only.
+# Validate devicetest [-> figma-live-sync] order using first match **inside** "## Acceptance status (hooks)" only.
+# autotest/mocktest may be recorded as optional diagnostics, but they are not extension acceptance gates.
 # Optional 4th param: design_sync_required="true" to enforce a design-sync status as 4th step (new: figma-live-sync; legacy: codetofigma).
 validate_order_in_acceptance_section() {
   local file="$1"
@@ -143,8 +144,6 @@ validate_order_in_acceptance_section() {
   local status_fallback="${3:-false}"
   local design_sync_required="${4:-false}"
   local tmp
-  local auto_line
-  local mock_line
   local device_line
   local design_sync_line
   tmp=$(mktemp)
@@ -154,8 +153,6 @@ validate_order_in_acceptance_section() {
     return 1
   fi
   # Status tokens: English + 中文 + waived (N/A…) for no-extension versions
-  auto_line="$(first_match_line "autotest[[:space:]:：-]*${ACCEPTANCE_STATUS_ORDER_TOKENS}" "$tmp")"
-  mock_line="$(first_match_line "mocktest[[:space:]:：-]*${ACCEPTANCE_STATUS_ORDER_TOKENS}" "$tmp")"
   device_line="$(first_match_line "devicetest[[:space:]:：-]*${ACCEPTANCE_STATUS_ORDER_TOKENS}" "$tmp")"
   design_sync_line=""
   if [ "$design_sync_required" = "true" ]; then
@@ -163,13 +160,8 @@ validate_order_in_acceptance_section() {
   fi
   rm -f "$tmp"
 
-  if [ -z "$auto_line" ] || [ -z "$mock_line" ] || [ -z "$device_line" ]; then
-    emit_block_json "${scope} 在「## Acceptance status (hooks)」小节内缺少 autotest/mocktest/devicetest 的带状态结果行。" "$status_fallback"
-    return 1
-  fi
-
-  if [ "$auto_line" -ge "$mock_line" ] || [ "$mock_line" -ge "$device_line" ]; then
-    emit_block_json "${scope} 小节内测试顺序须为 autotest -> mocktest -> devicetest（按首次匹配行号）。" "$status_fallback"
+  if [ -z "$device_line" ]; then
+    emit_block_json "${scope} 在「## Acceptance status (hooks)」小节内缺少 devicetest 的带状态结果行；扩展类产品以真实母体附着验收为准，autotest/mocktest 不再作为强制验收门。" "$status_fallback"
     return 1
   fi
 
@@ -179,7 +171,7 @@ validate_order_in_acceptance_section() {
       return 1
     fi
     if [ "$device_line" -ge "$design_sync_line" ]; then
-      emit_block_json "${scope} 小节内测试顺序须为 autotest -> mocktest -> devicetest -> figma-live-sync（legacy codetofigma 兼容；按首次匹配行号）。" "$status_fallback"
+      emit_block_json "${scope} 小节内测试顺序须为 devicetest -> figma-live-sync（legacy codetofigma 兼容；按首次匹配行号）。" "$status_fallback"
       return 1
     fi
   fi
@@ -222,9 +214,7 @@ next_expected_test_from_version() {
     return 0
   fi
 
-  if has_completed_acceptance_status_keyword "autotest" "$tmp" && \
-     has_completed_acceptance_status_keyword "mocktest" "$tmp" && \
-     has_completed_acceptance_status_keyword "devicetest" "$tmp"; then
+  if has_completed_acceptance_status_keyword "devicetest" "$tmp"; then
     if [ "$design_sync_required" = "true" ]; then
       if has_completed_acceptance_status_keyword "figma-live-sync" "$tmp" || \
          has_completed_acceptance_status_keyword "figma_live_sync" "$tmp" || \
@@ -244,20 +234,8 @@ next_expected_test_from_version() {
     fi
   fi
 
-  if has_completed_acceptance_status_keyword "autotest" "$tmp" && has_completed_acceptance_status_keyword "mocktest" "$tmp"; then
-    rm -f "$tmp"
-    printf 'devicetest'
-    return 0
-  fi
-
-  if has_completed_acceptance_status_keyword "autotest" "$tmp"; then
-    rm -f "$tmp"
-    printf 'mocktest'
-    return 0
-  fi
-
   rm -f "$tmp"
-  printf 'autotest'
+  printf 'devicetest'
 }
 
 # Backwards-compatible alias: historically scanned a whole file; now identical to
@@ -287,7 +265,7 @@ has_case_id_in_file() {
   rg -q "\\b(T|TC)-[0-9]{3}\\b" "$file"
 }
 
-# True when the value after autotest:/mocktest:/devicetest: means extension env tests were not run
+# Legacy/web-only helper: true when all autotest:/mocktest:/devicetest values mean extension env tests were not run
 # and no manifest build version needs to be echoed (build-version-report-guard).
 acceptance_status_value_is_manifest_waived() {
   local raw="$1"
@@ -908,4 +886,35 @@ _is_integration_branch() {
     main|master) return 0 ;;
     *) return 1 ;;
   esac
+}
+
+plugin_ga4_analytics_source_path() {
+  printf '%s/app/plugin/entrypoints/background/services/ga4-analytics.ts' "${1:-}"
+}
+
+plugin_ga4_analytics_enabled() {
+  local project_dir="$1"
+  [ -f "$(plugin_ga4_analytics_source_path "$project_dir")" ]
+}
+
+plugin_background_js_path() {
+  printf '%s/app/plugin/.output/chrome-mv3/background.js' "${1:-}"
+}
+
+plugin_env_file_path() {
+  printf '%s/app/plugin/.env' "${1:-}"
+}
+
+superpowers_cws_analytics_waived_marker_path() {
+  printf '%s/.superpowers/cws-analytics-waived' "${1:-}"
+}
+
+superpowers_cws_analytics_waived() {
+  local project_dir="$1"
+  [ -n "$project_dir" ] && [ -f "$(superpowers_cws_analytics_waived_marker_path "$project_dir")" ]
+}
+
+plugin_env_get() {
+  local file="$1" key="$2"
+  rg -m 1 "^${key}=(.*)$" "$file" 2>/dev/null | sed -E "s/^${key}=//" | tr -d '\r' || true
 }

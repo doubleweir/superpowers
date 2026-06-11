@@ -41,23 +41,21 @@ Stop. Don't proceed to Step 2.
 
 ### Step 1.5: Mandatory Final Acceptance Tests
 
-Before completion options, run all three acceptance skills for the active PR closure:
+Before completion options, run real-host acceptance for the active PR closure:
 
-1. `autotest` (automated mock environment, Playwright-capable)
-2. `mocktest` (mock data/service scenarios)
-3. `devicetest` (required device profiles)
+1. `devicetest` (real Chrome / real host attachment)
+2. `autotest` / `mocktest` only when useful as optional diagnostics
 
 Command sources (ChatBobi project commands):
 
-- `/Users/harry/Documents/chatbobi/.claude/commands/autotest.md`
-- `/Users/harry/Documents/chatbobi/.claude/commands/mocktest.md`
 - `/Users/harry/Documents/chatbobi/.claude/commands/devicetest.md`
+- optional diagnostics: `/Users/harry/Documents/chatbobi/.claude/commands/autotest.md`, `/Users/harry/Documents/chatbobi/.claude/commands/mocktest.md`
 
 Required logging (must already be in active maintenance, then refreshed here):
 
-- `docs/Vx.y.z-<topic>/Vx.y.z-test.md` must include all three **status lines** in order under the exact H2 **`## Acceptance status (hooks)`** (hooks do not read these from the PR `tdd-log`). PR `tdd-log` remains for TDD case evidence only.
+- `docs/Vx.y.z-<topic>/Vx.y.z-test.md` must include the `devicetest` **status line** under the exact H2 **`## Acceptance status (hooks)`** (hooks do not read this from the PR `tdd-log`). PR `tdd-log` remains for TDD case evidence only.
 
-If any of the three tests is missing or failing, stop and do not proceed.
+If required real-host `devicetest` evidence is missing or failing, stop and do not proceed.
 Do not defer missing evidence to "final cleanup later."
 
 ### Step 2: Determine Base Branch
@@ -144,10 +142,42 @@ When the branch is `feat/{prefix}v*-hotfix-*` and any **in-flight next-minor** `
 
 `N/A` only when no next-minor feature branch exists. On the **hotfix** branch, Stop hook `hotfix-parallel-sync-guard` requires **plan only** (`strategy` + `target_branch`) while next-minor work is in flight — not `evidence` (that lands after hotfix merges). On the **next-minor** branch, `next-minor-behind-main-guard` blocks when integration (`main`/`master`) has sub-product commits not yet merged.
 
+### Step 2.74: Production Build Credentials Check (Publish Path Only — No.37 / No.33)
+
+Run this step only when the human partner explicitly wants to publish/deploy/package artifacts for end users now (CWS upload or sub-product tag on `main`).
+For normal development branch closure (merge/PR/keep/discard without release), skip this step.
+
+**Problem this prevents:** `.env` is gitignored. Deleting `.env` and rebuilding before CWS upload compiles analytics to no-op (credentials missing at build time) while Step 2.75 privacy audit still passes because the zip correctly excludes `.env*`.
+
+**Applies to:** any CWS publish or `plugin/pv*` / `*-hf*` tag when the extension ships GA4 analytics (`ga4-analytics.ts` exists).
+
+**Waiver:** intentional analytics-off publish → maintain **`.superpowers/cws-analytics-waived`** (empty marker file).
+
+**Before Step 2.75, verify build credentials (ChatBobi plugin example):**
+
+1. **Source `.env` must exist** at `app/plugin/.env` with non-empty:
+   - `WXT_GA4_MEASUREMENT_ID` (e.g. `G-…`)
+   - `WXT_GA4_API_SECRET`
+   - `WXT_ANALYTICS_MODE=prod` (not `debug` / `validate`)
+2. **Do not delete `.env` after DebugView validation.** Switch mode to `prod` and rebuild instead.
+3. **Verify committed build output** at `app/plugin/.output/chrome-mv3/background.js`:
+   ```bash
+   grep "mp/collect" app/plugin/.output/chrome-mv3/background.js
+   grep "$WXT_GA4_MEASUREMENT_ID" app/plugin/.output/chrome-mv3/background.js
+   ```
+   Measurement ID absent → analytics no-op build; stop and rebuild with correct `.env`.
+4. **Debug build detection (No.33):** inlined mode must be `prod`, not `debug`/`validate` (minified `getMode()` embeds `` `prod` `` / `` `debug` ``).
+
+Stop hook **`cws-production-build-credentials-guard`** enforces steps 1–4 on `main`/`master` when GA4 ships and `.output/` exists.
+
+**If verification fails:** stop immediately; do not proceed to Step 2.75 or Step 3 until `.env` is correct and `npm run build` + commit `.output/` is redone.
+
 ### Step 2.75: Conditional Release Privacy Audit Gate (Publish Path Only)
 
 Run this step only when the human partner explicitly wants to publish/deploy/package artifacts for end users now.
 For normal development branch closure (merge/PR/keep/discard without release), skip this step.
+
+**Scope:** audit the **CWS upload zip / publish artifact tree** (e.g. `app/plugin/.output/chrome-mv3/`), **not** the source workspace. Step 2.74 requires `.env` at **build time**; excluding `.env*` from the shipped zip is correct here.
 
 If publish path is selected, identify the build artifact directory and run a minimum privacy audit before presenting completion options:
 
@@ -335,8 +365,9 @@ Branch closure complete:
 
 **Always:**
 - Verify tests before offering options
-- Run `autotest` + `mocktest` + `devicetest` before completion and record ordered status under **`## Acceptance status (hooks)`** in `Vx.y.z-test.md`
-- Run release privacy audit when publish path is requested
+- Run real-host `devicetest` before completion and record ordered status under **`## Acceptance status (hooks)`** in `Vx.y.z-test.md`
+- Run production build credentials check (Step 2.74) then release privacy audit (Step 2.75) when publish path is requested
+- Respect **`hooks/cws-production-build-credentials-guard`** on `main` when GA4 ships (unless `.superpowers/cws-analytics-waived`)
 - Present exactly 4 options
 - Get typed confirmation for Option 4
 - Clean up worktree for Options 1 & 4 only

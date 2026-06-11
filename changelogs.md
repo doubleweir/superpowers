@@ -8,6 +8,8 @@
 
 | 这版在解决什么 | 点入正文 |
 | --- | --- |
+| **CWS GA4 构建凭证门（No.37/33）**：finishing Step 2.74；`cws-production-build-credentials-guard` 校验 .env + prod 嵌入产物 | [→ 打开](#sec-20260611-cws-production-credentials) |
+| **扩展验收真实母体化**：扩展类产品跳过强制 `autotest`/`mocktest`；门控改为 `devicetest -> figma-live-sync(按计划)`；自动/Mock 仅作诊断 | [→ 打开](#sec-20260525-real-host-acceptance) |
 | **宿主接线（wire）**：`full-sync` 第三步把 fork `hooks.json` 写入项目 settings；overlay 优先 resolver；No.18 hotfix Stop 自动生效 | [→ 打开](#sec-20260517-host-wire) |
 | **CWS 发布链（No.19）**：main 上 rebuild+commit `.output` 再 tag/CWS；`cws-artifact-sync-guard`；finishing Step 2.55b | [→ 打开](#sec-20260517-cws-artifact-sync) |
 | **已发布子产品 hotfix（R1/R2/H7）**：与常规 PR 同形；brainstorming 三选一；`hotfix-flow` 薄编排；并行下一版本 Stop 双 hook | [→ 打开](#sec-20260517-published-hotfix-flow) |
@@ -48,6 +50,55 @@
 | **evolution-keeper** 角色**落地** | [→ 打开](#sec-20260420-keeper) |
 | 测试**证据**、**门禁**试点、用例可**机器**判 | [→ 打开](#sec-20260420-testgate) |
 | 起版 **5.0.7**：**版本/PR/Task 文档** + **七步** **硬**约束 | [→ 打开](#sec-20260420-507) |
+
+<a id="sec-20260611-cws-production-credentials"></a>
+## CWS GA4 构建凭证门（No.37 / No.33 / project2feedback）
+
+> **发版**：待下一枚 `sp-v5.0.7-xia-*` tag；ChatBobi 侧需 `full-sync latest` + wire。
+
+### 结论
+
+`.env` 被 gitignore，删除后 rebuild 会使 GA4 analytics 编译为 no-op，但 Step 2.75 隐私审计仍可通过（zip 不含 `.env`）。发布前须校验 **构建时** `.env` 存在且 `WXT_ANALYTICS_MODE=prod`，且 `background.js` 嵌入 Measurement ID 与 prod 模式。
+
+### 模块
+
+| 路径 | 说明 |
+|------|------|
+| `skills/finishing-a-development-branch` Step **2.74** | Production Build Credentials Check（发布路径） |
+| Step **2.75** | 澄清审计对象为 CWS zip，非源码 `.env` |
+| `hooks/cws-production-build-credentials-guard` | Stop：main 上 GA4 扩展 `.output` 与 `.env` 不一致则 block |
+| `hooks/acceptance-order-common` | `plugin_ga4_analytics_enabled`、`superpowers_cws_analytics_waived` 等 |
+| 豁免 | `.superpowers/cws-analytics-waived`（故意 analytics-off 发布） |
+
+### 验证
+
+- `tests/claude-code/test-cws-production-build-credentials.sh`
+
+<a id="sec-20260525-real-host-acceptance"></a>
+## 扩展验收真实母体化：强制门只保留 devicetest
+
+> **发版**：待下一枚 `sp-v5.0.7-xia-*` tag；ChatBobi 侧需经 Runtime Sync 后生效。
+
+### 结论
+
+扩展程序类产品必须附着真实母体测试，`autotest` / `mocktest` 不再作为最终验收门。默认强制顺序改为 **`devicetest -> figma-live-sync(按计划)`**；自动化与 mock 环境仍可作为快速诊断，但不阻止版本完成。Stop / Submit 共享逻辑、模板、README/CLAUDE 和相关 skills 已对齐。
+
+### 模块
+
+| 路径 | 说明 |
+|------|------|
+| `hooks/acceptance-order-common` | `next_expected` 与 `validate_order` 改为真实母体验收优先 |
+| `hooks/enforce-acceptance-order` | `autotest` / `mocktest` 请求不再进入顺序门；`devicetest` 仍受门控 |
+| `docs/superpowers/templates/versioning/version-test-template.md` | `## Acceptance status (hooks)` 改为 `devicetest` 必填、Figma 按计划追加 |
+| `skills/autotest`, `skills/mocktest`, `skills/devicetest` | 自动/Mock 降级为可选诊断；真实母体 `devicetest` 为强制验收 |
+| `tests/claude-code/test-real-host-acceptance.sh` | 新增回归覆盖 devicetest-only 与 Figma 后续门控 |
+
+### 验证
+
+- `bash tests/claude-code/test-real-host-acceptance.sh`
+- `bash tests/claude-code/test-enforce-acceptance-next-expected.sh`
+- `bash tests/claude-code/test-extension-pipeline-waived.sh`
+- `bash tests/claude-code/test-build-version-waiver.sh`
 
 <a id="sec-20260517-host-wire"></a>
 ## 宿主接线：fork 改完 hook 须在项目 settings 自动挂上（No.18 wire）
