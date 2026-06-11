@@ -93,4 +93,4 @@ Record in active PR `*-finalize-log.md` **early** (plan before hotfix merges):
 5. Complete parallel sync to next-minor branch if exists
 6. Update `issues.md` ISSUE status
 
-See **finishing-a-development-branch** Step 2.55b (rebuild + commit `.output` on `main` before CWS/tag — **No.19, same as regular releases**), Step 2.6 (sub-product tags), and Step 2.55 (platform VERSION).
+See **finishing-a-development-branch** Step 2.55b (rebuild + commit `.output` on `main` before CWS/tag — **No.19**), Step **2.74** (prod `.env` + GA4 credentials in build — **No.37/33**), Step 2.6 (sub-product tags), and Step 2.55 (platform VERSION).
